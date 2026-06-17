@@ -1,4 +1,4 @@
-const CACHE = 'vilnius-bus-v49';
+const CACHE = 'vilnius-bus-v50';
 
 self.addEventListener('install', e => { self.skipWaiting(); });
 
@@ -11,27 +11,19 @@ self.addEventListener('activate', e => {
   self.clients.claim();
 });
 
-function cacheResponse(req, res) {
-  const toCache = res.clone(); // clone synchronously before any async work
-  caches.open(CACHE).then(c => c.put(req, toCache));
-}
-
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
 
   if (url.pathname.startsWith('/api/')) {
-    // Network first — cache fallback for offline schedule viewing
     e.respondWith(
       fetch(e.request)
-        .then(res => { cacheResponse(e.request, res); return res; })
-        .catch(() => caches.match(e.request))
-    );
-  } else {
-    // Network first — always get fresh code, cache for offline fallback
-    e.respondWith(
-      fetch(e.request)
-        .then(res => { if (res.ok) cacheResponse(e.request, res); return res; })
+        .then(res => {
+          const toCache = res.clone();
+          caches.open(CACHE).then(c => c.put(e.request, toCache));
+          return res;
+        })
         .catch(() => caches.match(e.request))
     );
   }
+  // Static files: no SW interception — browser fetches from network directly
 });
