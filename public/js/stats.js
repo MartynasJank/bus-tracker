@@ -118,11 +118,11 @@ function renderStats(data, activeDays) {
     </div>
     <div class="stat-card">
       <div class="stat-card-value" style="color:${(summary.early_pct ?? 0) > 10 ? 'var(--red)' : (summary.early_pct ?? 0) > 3 ? 'var(--amber)' : 'var(--green)'}">${summary.early_pct ?? 0}%</div>
-      <div class="stat-card-label">early &gt;1 min</div>
+      <div class="stat-card-label">early &gt;30s</div>
     </div>
     <div class="stat-card">
       <div class="stat-card-value" style="color:${(summary.punctual_pct ?? 0) >= 60 ? 'var(--green)' : (summary.punctual_pct ?? 0) >= 40 ? 'var(--amber)' : 'var(--red)'}">${summary.punctual_pct ?? 0}%</div>
-      <div class="stat-card-label">punctual ±1 min</div>
+      <div class="stat-card-label">punctual −30s to +1min</div>
     </div>
     <div class="stat-card">
       <div class="stat-card-value">${summary.total?.toLocaleString() ?? '0'}</div>
@@ -130,7 +130,7 @@ function renderStats(data, activeDays) {
     </div>
   </div>`;
 
-  html += `<div class="stat-threshold-note"><span>Late &gt;1m · Punctual ±1m · Early &gt;1m</span></div>`;
+  html += `<div class="stat-threshold-note"><span>Late &gt;1min · Punctual −30s–+1min · Early &gt;30s</span></div>`;
 
   if (!summary.total) {
     html += `<p class="empty">No data yet — check back after a few minutes.</p>`;
