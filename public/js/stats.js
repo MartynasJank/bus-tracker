@@ -170,7 +170,7 @@ export async function openStats(days = 7) {
   try {
     const data = await fetch(`/api/stats?days=${days}`).then(response => response.json());
     renderStats(data, days);
-  } catch {
-    $('stats-list').innerHTML = '<p class="empty">Could not load stats.</p>';
+  } catch (err) {
+    $('stats-list').innerHTML = `<p class="empty">Error: ${err?.message || err}</p>`;
   }
 }
