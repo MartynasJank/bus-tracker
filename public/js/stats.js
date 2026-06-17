@@ -13,10 +13,13 @@ function delayColor(delaySeconds) {
 
 function formatDelay(delaySeconds) {
   if (delaySeconds == null) return '—';
-  if (delaySeconds <= 0) return `${Math.abs(Math.round(delaySeconds))}s early`;
-  const minutes = Math.floor(delaySeconds / 60);
-  const seconds = delaySeconds % 60;
-  return minutes ? `+${minutes}m ${seconds}s` : `+${seconds}s`;
+  const abs = Math.abs(Math.round(delaySeconds));
+  if (delaySeconds <= 0) {
+    const m = Math.floor(abs / 60), s = abs % 60;
+    return m ? `${m}m ${s}s early` : `${abs}s early`;
+  }
+  const m = Math.floor(abs / 60), s = abs % 60;
+  return m ? `+${m}m ${s}s` : `+${s}s`;
 }
 
 function formatCollectionDate(unixSeconds) {
@@ -37,7 +40,7 @@ function barChartRowHtml(value, maxValue, label, sublabel) {
     </div>`;
 }
 
-function routeBarRowHtml(route, maxDelay) {
+function routeBarRowHtml(route, maxDelay, sublabel) {
   const routeInfo = state.routeColors[route.route_short_name];
   const bg = routeInfo?.color ? `#${routeInfo.color}` : '#444';
   const fg = routeInfo?.text ? `#${routeInfo.text}` : '#fff';
@@ -53,9 +56,15 @@ function routeBarRowHtml(route, maxDelay) {
       </div>
       <div class="stat-bar-value stat-bar-value-route" style="color:${delayColor(route.avg_delay)}">
         <span>${formatDelay(route.avg_delay)}</span>
-        <span class="stat-bar-late">${route.late_pct}% late · ${route.early_pct}% early</span>
+        ${sublabel ? `<span class="stat-bar-late">${escapeHtml(sublabel)}</span>` : ''}
       </div>
     </div>`;
+}
+
+function routeSublabel(seeAllKey, route) {
+  if (seeAllKey === 'late') return `${route.late_pct}% late`;
+  if (seeAllKey === 'early') return `${route.early_pct}% early`;
+  return null;
 }
 
 function routeSectionHtml(title, routes, seeAllKey) {
@@ -63,7 +72,7 @@ function routeSectionHtml(title, routes, seeAllKey) {
   const preview = routes.slice(0, PREVIEW_COUNT);
   const maxDelay = Math.max(...routes.map(r => Math.abs(r.avg_delay)));
   let html = `<div class="stat-section"><div class="stat-section-title">${escapeHtml(title)}</div>`;
-  html += preview.map(r => routeBarRowHtml(r, maxDelay)).join('');
+  html += preview.map(r => routeBarRowHtml(r, maxDelay, routeSublabel(seeAllKey, r))).join('');
   if (routes.length > PREVIEW_COUNT) {
     html += `<button class="stat-see-all" data-key="${seeAllKey}">See all ${routes.length} routes</button>`;
   }
@@ -71,13 +80,13 @@ function routeSectionHtml(title, routes, seeAllKey) {
   return html;
 }
 
-function renderFullRouteList(list, title, routes, activeDays) {
+function renderFullRouteList(list, title, routes, activeDays, seeAllKey) {
   const maxDelay = Math.max(...routes.map(r => Math.abs(r.avg_delay)));
   let html = `
     <button class="stat-back-btn">← Back to stats</button>
     <div class="stat-section">
       <div class="stat-section-title">${escapeHtml(title)}</div>
-      ${routes.map(r => routeBarRowHtml(r, maxDelay)).join('')}
+      ${routes.map(r => routeBarRowHtml(r, maxDelay, routeSublabel(seeAllKey, r))).join('')}
     </div>`;
   list.innerHTML = html;
   list.querySelector('.stat-back-btn').addEventListener('click', () => openStats(activeDays));
@@ -96,22 +105,32 @@ function renderStats(data, activeDays) {
 
   html += `<div class="stat-cards">
     <div class="stat-card">
-      <div class="stat-card-value">${summary.total?.toLocaleString() ?? '0'}</div>
-      <div class="stat-card-label">observations</div>
+      <div class="stat-card-value" style="color:${delayColor(summary.avg_late_sec)}">${formatDelay(summary.avg_late_sec)}</div>
+      <div class="stat-card-label">avg late</div>
     </div>
     <div class="stat-card">
-      <div class="stat-card-value" style="color:${delayColor(summary.avg_delay)}">${formatDelay(summary.avg_delay)}</div>
-      <div class="stat-card-label">avg delay</div>
+      <div class="stat-card-value" style="color:${delayColor(summary.avg_early_sec)}">${formatDelay(summary.avg_early_sec)}</div>
+      <div class="stat-card-label">avg early</div>
     </div>
     <div class="stat-card">
-      <div class="stat-card-value" style="color:${summary.late_pct > 30 ? 'var(--red)' : summary.late_pct > 15 ? 'var(--amber)' : 'var(--green)'}">${summary.late_pct ?? 0}%</div>
-      <div class="stat-card-label">running late</div>
+      <div class="stat-card-value" style="color:${(summary.late_pct ?? 0) > 30 ? 'var(--red)' : (summary.late_pct ?? 0) > 15 ? 'var(--amber)' : 'var(--green)'}">${summary.late_pct ?? 0}%</div>
+      <div class="stat-card-label">late (&gt;1 min)</div>
     </div>
     <div class="stat-card">
       <div class="stat-card-value" style="color:${(summary.early_pct ?? 0) > 10 ? 'var(--red)' : (summary.early_pct ?? 0) > 3 ? 'var(--amber)' : 'var(--green)'}">${summary.early_pct ?? 0}%</div>
-      <div class="stat-card-label">running early</div>
+      <div class="stat-card-label">early (&gt;1 min)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-value" style="color:${(summary.punctual_pct ?? 0) >= 60 ? 'var(--green)' : (summary.punctual_pct ?? 0) >= 40 ? 'var(--amber)' : 'var(--red)'}">${summary.punctual_pct ?? 0}%</div>
+      <div class="stat-card-label">punctual (±1 min)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-value">${summary.total?.toLocaleString() ?? '0'}</div>
+      <div class="stat-card-label">observations</div>
     </div>
   </div>`;
+
+  html += `<p class="stat-threshold-note">Late &gt;1 min · Early &gt;1 min · Punctual within ±1 min</p>`;
 
   if (!summary.total) {
     html += `<p class="empty">No data yet — check back after a few minutes.</p>`;
@@ -157,7 +176,7 @@ function renderStats(data, activeDays) {
       const key = button.dataset.key;
       const routes = key === 'late' ? by_route_late : key === 'early' ? by_route_early : by_route_punctual;
       const title = key === 'late' ? 'Most Late' : key === 'early' ? 'Most Early' : 'Most Punctual';
-      renderFullRouteList(list, title, routes, activeDays);
+      renderFullRouteList(list, title, routes, activeDays, key);
     });
   });
 }

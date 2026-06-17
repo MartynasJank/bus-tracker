@@ -8,9 +8,11 @@ export function handleStats(req, res, params) {
   const summary = db.prepare(`
     SELECT
       COUNT(*) AS total,
-      ROUND(AVG(delay_sec)) AS avg_delay,
+      ROUND(AVG(CASE WHEN delay_sec > 60 THEN delay_sec END)) AS avg_late_sec,
+      ROUND(AVG(CASE WHEN delay_sec < -60 THEN delay_sec END)) AS avg_early_sec,
       ROUND(SUM(CASE WHEN delay_sec > 60 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) AS late_pct,
       ROUND(SUM(CASE WHEN delay_sec < -60 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) AS early_pct,
+      ROUND(SUM(CASE WHEN delay_sec BETWEEN -60 AND 60 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) AS punctual_pct,
       MIN(observed_at) AS first_obs
     FROM delay_log
     WHERE observed_at > ?
@@ -26,11 +28,10 @@ export function handleStats(req, res, params) {
     FROM delay_log
     WHERE observed_at > ?
     GROUP BY route_short_name
-    HAVING count >= 20
   `;
-  const byRouteLate      = db.prepare(routeBase + ' ORDER BY avg_delay DESC').all(since);
-  const byRouteEarly     = db.prepare(routeBase + ' ORDER BY avg_delay ASC').all(since);
-  const byRoutePunctual  = db.prepare(routeBase + ' ORDER BY ABS(avg_delay) ASC').all(since);
+  const byRouteLate      = db.prepare(routeBase + ' HAVING count >= 20 ORDER BY avg_delay DESC').all(since);
+  const byRouteEarly     = db.prepare(routeBase + ' HAVING count >= 20 AND avg_delay < 0 ORDER BY avg_delay ASC').all(since);
+  const byRoutePunctual  = db.prepare(routeBase + ' HAVING count >= 20 ORDER BY ABS(avg_delay) ASC').all(since);
 
   const byHour = db.prepare(`
     SELECT hour, ROUND(AVG(delay_sec)) AS avg_delay, COUNT(*) AS count
