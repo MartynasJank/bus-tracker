@@ -34,6 +34,9 @@ function serveStatic(req, res, urlPath) {
     if (error) return respond(res, 404, 'Not found');
     const extension = path.extname(filePath);
     res.setHeader('Content-Type', MIME_TYPES[extension] || 'application/octet-stream');
+    if (extension === '.js' || extension === '.css') {
+      res.setHeader('Cache-Control', 'no-cache');
+    }
     res.writeHead(200);
     res.end(data);
   });
