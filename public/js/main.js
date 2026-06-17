@@ -18,6 +18,10 @@ $('back-btn').addEventListener('click', () => {
   }
 
   if (state.screen === 'stats') {
+    if (state.statsFullList) {
+      openStats(state.statsActiveDays);
+      return;
+    }
     history.replaceState(null, '', '/');
     showScreen(state.prevScreen === 'stops' ? 'stops' : 'plan',
                state.prevScreen === 'stops' ? 'Nearby Stops' : 'Plan Journey');

@@ -28,6 +28,10 @@ export const state = {
   activeRoutes:     new Set(),
   arrivalsFetchedAt: 0,
 
+  // Stats
+  statsFullList:    false,
+  statsActiveDays:  7,
+
   // Timers
   refreshTimer:     null,
   tickTimer:        null,

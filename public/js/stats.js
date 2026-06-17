@@ -80,6 +80,7 @@ function routeSectionHtml(title, routes, seeAllKey) {
 }
 
 function renderFullRouteList(list, title, routes, activeDays, seeAllKey) {
+  state.statsFullList = true;
   const maxDelay = Math.max(...routes.map(r => Math.abs(r.avg_delay)));
   let html = `
     <button class="stat-back-btn">← Back to stats</button>
@@ -193,6 +194,8 @@ function renderStats(data, activeDays) {
 
 export async function openStats(days = 7) {
   state.prevScreen = state.screen;
+  state.statsFullList = false;
+  state.statsActiveDays = days;
   showScreen('stats', 'Delay Stats');
   history.replaceState(null, '', '/stats');
   $('stats-list').innerHTML = '<p class="empty">Loading…</p>';
