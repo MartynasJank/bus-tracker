@@ -30,7 +30,7 @@ export function handleStats(req, res, params) {
     GROUP BY route_short_name
   `;
   const byRouteLate      = db.prepare(routeBase + ' HAVING count >= 20 AND avg_delay > 60 ORDER BY avg_delay DESC').all(since);
-  const byRouteEarly     = db.prepare(routeBase + ' HAVING count >= 20 AND early_pct >= 10 ORDER BY early_pct DESC').all(since);
+  const byRouteEarly     = db.prepare(routeBase + ' HAVING count >= 20 AND avg_delay < -60 ORDER BY avg_delay ASC').all(since);
   const byRoutePunctual  = db.prepare(routeBase + ' HAVING count >= 20 AND ABS(avg_delay) <= 60 ORDER BY ABS(avg_delay) ASC').all(since);
 
   const byHour = db.prepare(`
