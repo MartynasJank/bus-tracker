@@ -3,18 +3,19 @@ import { state } from './state.js';
 import { showScreen } from './navigation.js';
 
 const DAY_OF_WEEK_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const PREVIEW_COUNT = 5;
 
 function delayColor(delaySeconds) {
-  if (delaySeconds == null || delaySeconds <= 30) return 'var(--green)';
-  if (delaySeconds <= 120) return 'var(--amber)';
+  if (delaySeconds == null || Math.abs(delaySeconds) <= 30) return 'var(--green)';
+  if (Math.abs(delaySeconds) <= 120) return 'var(--amber)';
   return 'var(--red)';
 }
 
 function formatDelay(delaySeconds) {
   if (delaySeconds == null) return '—';
   if (delaySeconds <= 0) return `${Math.abs(Math.round(delaySeconds))}s early`;
-  const minutes = Math.floor(Math.abs(delaySeconds) / 60);
-  const seconds = Math.abs(delaySeconds) % 60;
+  const minutes = Math.floor(delaySeconds / 60);
+  const seconds = delaySeconds % 60;
   return minutes ? `+${minutes}m ${seconds}s` : `+${seconds}s`;
 }
 
@@ -24,7 +25,7 @@ function formatCollectionDate(unixSeconds) {
 }
 
 function barChartRowHtml(value, maxValue, label, sublabel) {
-  const percentage = maxValue > 0 ? Math.min(100, Math.round((value / maxValue) * 100)) : 0;
+  const percentage = maxValue > 0 ? Math.min(100, Math.round((Math.abs(value) / maxValue) * 100)) : 0;
   const color = delayColor(value);
   return `
     <div class="stat-bar-row">
@@ -36,9 +37,55 @@ function barChartRowHtml(value, maxValue, label, sublabel) {
     </div>`;
 }
 
+function routeBarRowHtml(route, maxDelay) {
+  const routeInfo = state.routeColors[route.route_short_name];
+  const bg = routeInfo?.color ? `#${routeInfo.color}` : '#444';
+  const fg = routeInfo?.text ? `#${routeInfo.text}` : '#fff';
+  const fillPct = maxDelay > 0
+    ? Math.min(100, Math.round(Math.abs(route.avg_delay) / maxDelay * 100)) : 0;
+  return `
+    <div class="stat-bar-row">
+      <div class="stat-bar-label stat-bar-label-route">
+        <span class="stat-route-chip" style="background:${bg};color:${fg}">${escapeHtml(route.route_short_name)}</span>
+      </div>
+      <div class="stat-bar-track">
+        <div class="stat-bar-fill" style="width:${fillPct}%;background:${delayColor(route.avg_delay)}"></div>
+      </div>
+      <div class="stat-bar-value stat-bar-value-route" style="color:${delayColor(route.avg_delay)}">
+        <span>${formatDelay(route.avg_delay)}</span>
+        <span class="stat-bar-late">${route.late_pct}% late · ${route.early_pct}% early</span>
+      </div>
+    </div>`;
+}
+
+function routeSectionHtml(title, routes, seeAllKey) {
+  if (!routes.length) return '';
+  const preview = routes.slice(0, PREVIEW_COUNT);
+  const maxDelay = Math.max(...routes.map(r => Math.abs(r.avg_delay)));
+  let html = `<div class="stat-section"><div class="stat-section-title">${escapeHtml(title)}</div>`;
+  html += preview.map(r => routeBarRowHtml(r, maxDelay)).join('');
+  if (routes.length > PREVIEW_COUNT) {
+    html += `<button class="stat-see-all" data-key="${seeAllKey}">See all ${routes.length} routes</button>`;
+  }
+  html += `</div>`;
+  return html;
+}
+
+function renderFullRouteList(list, title, routes, activeDays) {
+  const maxDelay = Math.max(...routes.map(r => Math.abs(r.avg_delay)));
+  let html = `
+    <button class="stat-back-btn">← Back to stats</button>
+    <div class="stat-section">
+      <div class="stat-section-title">${escapeHtml(title)}</div>
+      ${routes.map(r => routeBarRowHtml(r, maxDelay)).join('')}
+    </div>`;
+  list.innerHTML = html;
+  list.querySelector('.stat-back-btn').addEventListener('click', () => openStats(activeDays));
+}
+
 function renderStats(data, activeDays) {
   const list = $('stats-list');
-  const { summary, by_route, by_hour, by_dow } = data;
+  const { summary, by_route_late, by_route_early, by_route_punctual, by_hour, by_dow } = data;
 
   let html = `
     <div class="stat-range-row">
@@ -76,64 +123,43 @@ function renderStats(data, activeDays) {
   }
 
   if (by_hour.length) {
-    const maxHourDelay = Math.max(...by_hour.map(hour => Math.abs(hour.avg_delay)));
+    const maxHourDelay = Math.max(...by_hour.map(h => Math.abs(h.avg_delay)));
     html += `<div class="stat-section"><div class="stat-section-title">By Hour</div>`;
     for (let hour = 0; hour < 24; hour++) {
       const row = by_hour.find(h => h.hour === hour);
       if (!row) continue;
-      html += barChartRowHtml(
-        Math.abs(row.avg_delay),
-        maxHourDelay || 1,
-        `${String(hour).padStart(2, '0')}:00`,
-        formatDelay(row.avg_delay)
-      );
+      html += barChartRowHtml(row.avg_delay, maxHourDelay || 1, `${String(hour).padStart(2, '0')}:00`, formatDelay(row.avg_delay));
     }
     html += `</div>`;
   }
 
-  if (by_route.length) {
-    const maxRouteDelay = Math.max(...by_route.map(route => Math.abs(route.avg_delay)));
-    html += `<div class="stat-section"><div class="stat-section-title">Worst Routes</div>`;
-    for (const route of by_route) {
-      const routeInfo = state.routeColors[route.route_short_name];
-      const bg = routeInfo?.color ? `#${routeInfo.color}` : '#444';
-      const fg = routeInfo?.text ? `#${routeInfo.text}` : '#fff';
-      const fillPct = maxRouteDelay > 0
-        ? Math.min(100, Math.round(Math.abs(route.avg_delay) / maxRouteDelay * 100)) : 0;
-      html += `<div class="stat-bar-row">
-        <div class="stat-bar-label stat-bar-label-route">
-          <span class="stat-route-chip" style="background:${bg};color:${fg}">${escapeHtml(route.route_short_name)}</span>
-        </div>
-        <div class="stat-bar-track">
-          <div class="stat-bar-fill" style="width:${fillPct}%;background:${delayColor(route.avg_delay)}"></div>
-        </div>
-        <div class="stat-bar-value stat-bar-value-route" style="color:${delayColor(route.avg_delay)}">
-          <span>${formatDelay(route.avg_delay)}</span>
-          <span class="stat-bar-late">${route.late_pct}% late · ${route.early_pct}% early</span>
-        </div>
-      </div>`;
-    }
-    html += `</div>`;
-  }
+  html += routeSectionHtml('Most Late', by_route_late, 'late');
+  html += routeSectionHtml('Most Early', by_route_early, 'early');
+  html += routeSectionHtml('Most Punctual', by_route_punctual, 'punctual');
 
   if (by_dow.length) {
-    const maxDowDelay = Math.max(...by_dow.map(day => Math.abs(day.avg_delay)));
+    const maxDowDelay = Math.max(...by_dow.map(d => Math.abs(d.avg_delay)));
     html += `<div class="stat-section"><div class="stat-section-title">By Day</div>`;
     for (const day of by_dow) {
-      html += barChartRowHtml(
-        Math.abs(day.avg_delay),
-        maxDowDelay || 1,
-        DAY_OF_WEEK_LABELS[day.day_of_week] ?? day.day_of_week,
-        formatDelay(day.avg_delay)
-      );
+      html += barChartRowHtml(day.avg_delay, maxDowDelay || 1, DAY_OF_WEEK_LABELS[day.day_of_week] ?? day.day_of_week, formatDelay(day.avg_delay));
     }
     html += `</div>`;
   }
 
   list.innerHTML = html;
+
   list.querySelectorAll('.stat-range-chip').forEach(button =>
     button.addEventListener('click', () => openStats(parseInt(button.dataset.days)))
   );
+
+  list.querySelectorAll('.stat-see-all').forEach(button => {
+    button.addEventListener('click', () => {
+      const key = button.dataset.key;
+      const routes = key === 'late' ? by_route_late : key === 'early' ? by_route_early : by_route_punctual;
+      const title = key === 'late' ? 'Most Late' : key === 'early' ? 'Most Early' : 'Most Punctual';
+      renderFullRouteList(list, title, routes, activeDays);
+    });
+  });
 }
 
 export async function openStats(days = 7) {

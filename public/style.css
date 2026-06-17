@@ -1114,6 +1114,39 @@ header::after {
   max-width: 80px;
 }
 
+.stat-see-all {
+  display: block;
+  width: 100%;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px;
+  margin-top: 6px;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.15s, border-color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.stat-see-all:active {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+}
+
+.stat-back-btn {
+  display: block;
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 4px 2px 16px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* ── Overlay ─────────────────────────────────────────────────────────────── */
 
 .overlay {
