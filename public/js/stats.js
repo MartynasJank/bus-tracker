@@ -4,6 +4,13 @@ import { showScreen } from './navigation.js';
 
 const DAY_OF_WEEK_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const PREVIEW_COUNT = 5;
+const LATE_SEC  =  60;
+const EARLY_SEC = -30;
+
+function fmtThreshold(sec) {
+  const abs = Math.abs(sec);
+  return abs >= 60 ? `${abs / 60}min` : `${abs}s`;
+}
 
 function delayColor(delaySeconds) {
   if (delaySeconds == null || Math.abs(delaySeconds) <= 30) return 'var(--green)';
@@ -114,15 +121,15 @@ function renderStats(data, activeDays) {
     </div>
     <div class="stat-card">
       <div class="stat-card-value" style="color:${(summary.late_pct ?? 0) > 30 ? 'var(--red)' : (summary.late_pct ?? 0) > 15 ? 'var(--amber)' : 'var(--green)'}">${summary.late_pct ?? 0}%</div>
-      <div class="stat-card-label">late &gt;1 min</div>
+      <div class="stat-card-label">late &gt;${fmtThreshold(LATE_SEC)}</div>
     </div>
     <div class="stat-card">
       <div class="stat-card-value" style="color:${(summary.early_pct ?? 0) > 10 ? 'var(--red)' : (summary.early_pct ?? 0) > 3 ? 'var(--amber)' : 'var(--green)'}">${summary.early_pct ?? 0}%</div>
-      <div class="stat-card-label">early &gt;30s</div>
+      <div class="stat-card-label">early &gt;${fmtThreshold(EARLY_SEC)}</div>
     </div>
     <div class="stat-card">
       <div class="stat-card-value" style="color:${(summary.punctual_pct ?? 0) >= 60 ? 'var(--green)' : (summary.punctual_pct ?? 0) >= 40 ? 'var(--amber)' : 'var(--red)'}">${summary.punctual_pct ?? 0}%</div>
-      <div class="stat-card-label">punctual −30s to +1min</div>
+      <div class="stat-card-label">punctual −${fmtThreshold(EARLY_SEC)} to +${fmtThreshold(LATE_SEC)}</div>
     </div>
     <div class="stat-card">
       <div class="stat-card-value">${summary.total?.toLocaleString() ?? '0'}</div>
@@ -130,7 +137,7 @@ function renderStats(data, activeDays) {
     </div>
   </div>`;
 
-  html += `<div class="stat-threshold-note"><span>Late &gt;1min · Punctual −30s–+1min · Early &gt;30s</span></div>`;
+  html += `<div class="stat-threshold-note"><span>Late &gt;${fmtThreshold(LATE_SEC)} · Punctual −${fmtThreshold(EARLY_SEC)}–+${fmtThreshold(LATE_SEC)} · Early &gt;${fmtThreshold(EARLY_SEC)}</span></div>`;
 
   if (!summary.total) {
     html += `<p class="empty">No data yet — check back after a few minutes.</p>`;
