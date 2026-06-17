@@ -10,6 +10,7 @@ export function handleStats(req, res, params) {
       COUNT(*) AS total,
       ROUND(AVG(delay_sec)) AS avg_delay,
       ROUND(SUM(CASE WHEN delay_sec > 60 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) AS late_pct,
+      ROUND(SUM(CASE WHEN delay_sec < -60 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) AS early_pct,
       MIN(observed_at) AS first_obs
     FROM delay_log
     WHERE observed_at > ?
@@ -20,12 +21,13 @@ export function handleStats(req, res, params) {
       route_short_name,
       COUNT(*) AS count,
       ROUND(AVG(delay_sec)) AS avg_delay,
-      ROUND(SUM(CASE WHEN delay_sec > 60 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) AS late_pct
+      ROUND(SUM(CASE WHEN delay_sec > 60 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) AS late_pct,
+      ROUND(SUM(CASE WHEN delay_sec < -60 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) AS early_pct
     FROM delay_log
     WHERE observed_at > ?
     GROUP BY route_short_name
     HAVING count >= 20
-    ORDER BY avg_delay DESC
+    ORDER BY ABS(avg_delay) DESC
     LIMIT 20
   `).all(since);
 

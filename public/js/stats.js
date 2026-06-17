@@ -61,8 +61,8 @@ function renderStats(data, activeDays) {
       <div class="stat-card-label">running late</div>
     </div>
     <div class="stat-card">
-      <div class="stat-card-value">${formatCollectionDate(summary.first_obs)}</div>
-      <div class="stat-card-label">collecting since</div>
+      <div class="stat-card-value" style="color:${(summary.early_pct ?? 0) > 10 ? 'var(--red)' : (summary.early_pct ?? 0) > 3 ? 'var(--amber)' : 'var(--green)'}">${summary.early_pct ?? 0}%</div>
+      <div class="stat-card-label">running early</div>
     </div>
   </div>`;
 
@@ -109,7 +109,7 @@ function renderStats(data, activeDays) {
         </div>
         <div class="stat-bar-value stat-bar-value-route" style="color:${delayColor(route.avg_delay)}">
           <span>${formatDelay(route.avg_delay)}</span>
-          <span class="stat-bar-late">${route.late_pct}% late</span>
+          <span class="stat-bar-late">${route.late_pct}% late · ${route.early_pct}% early</span>
         </div>
       </div>`;
     }
@@ -139,6 +139,7 @@ function renderStats(data, activeDays) {
 export async function openStats(days = 7) {
   state.prevScreen = state.screen;
   showScreen('stats', 'Delay Stats');
+  history.replaceState(null, '', '#stats');
   $('stats-list').innerHTML = '<p class="empty">Loading…</p>';
   try {
     const data = await fetch(`/api/stats?days=${days}`).then(response => response.json());

@@ -17,6 +17,7 @@ $('back-btn').addEventListener('click', () => {
   }
 
   if (state.screen === 'stats') {
+    history.replaceState(null, '', ' ');
     showScreen(state.prevScreen === 'stops' ? 'stops' : 'plan',
                state.prevScreen === 'stops' ? 'Nearby Stops' : 'Plan Journey');
     return;
@@ -73,6 +74,11 @@ setupPlanInputHandlers((journey, allJourneys) => {
 
 function init() {
   state.favorites = loadFavorites();
+
+  if (location.hash === '#stats') {
+    openStats(7);
+    return;
+  }
 
   fetch('/api/stops/all')
     .then(response => response.json())

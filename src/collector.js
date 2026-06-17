@@ -4,7 +4,7 @@ import gpsCache from './gps-cache.js';
 import { vilniusSecondsSinceMidnight, vilniusDayOfWeek } from './utils.js';
 
 const GPS_SOURCE_URL = 'https://www.stops.lt/vilnius/gps_full.txt';
-const COLLECTION_INTERVAL_MS = 30000;
+const COLLECTION_INTERVAL_MS = 60000;
 const DEDUP_WINDOW_SEC = 120;
 const RETENTION_DAYS = 30;
 

@@ -981,7 +981,7 @@ header::after {
 .stat-cards {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 8px;
   margin-bottom: 28px;
 }
 
@@ -989,16 +989,20 @@ header::after {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 16px 16px 14px;
+  padding: 12px 14px 11px;
+  min-width: 0;
 }
 
 .stat-card-value {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 800;
   color: var(--text);
   font-variant-numeric: tabular-nums;
   line-height: 1.1;
   letter-spacing: -0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .stat-card-label {
@@ -1006,8 +1010,9 @@ header::after {
   font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  margin-top: 6px;
+  letter-spacing: 0.08em;
+  margin-top: 5px;
+  white-space: nowrap;
 }
 
 .stat-section {
@@ -1104,6 +1109,9 @@ header::after {
   font-weight: 600;
   color: var(--text-muted);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 80px;
 }
 
 /* ── Overlay ─────────────────────────────────────────────────────────────── */
