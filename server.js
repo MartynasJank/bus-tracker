@@ -31,7 +31,18 @@ function serveStatic(req, res, urlPath) {
   if (!filePath.startsWith(PUBLIC_DIR)) return respond(res, 403, 'Forbidden');
 
   fs.readFile(filePath, (error, data) => {
-    if (error) return respond(res, 404, 'Not found');
+    if (error) {
+      if (!path.extname(filePath)) {
+        return fs.readFile(path.join(PUBLIC_DIR, 'index.html'), (err2, html) => {
+          if (err2) return respond(res, 404, 'Not found');
+          res.setHeader('Content-Type', 'text/html');
+          res.setHeader('Cache-Control', 'no-cache');
+          res.writeHead(200);
+          res.end(html);
+        });
+      }
+      return respond(res, 404, 'Not found');
+    }
     const extension = path.extname(filePath);
     res.setHeader('Content-Type', MIME_TYPES[extension] || 'application/octet-stream');
     if (extension === '.js' || extension === '.css') {

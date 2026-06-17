@@ -11,13 +11,14 @@ import { openStats } from './stats.js';
 $('back-btn').addEventListener('click', () => {
   if (state.screen === 'live-map') {
     stopLiveMap();
+    history.replaceState(null, '', '/');
     showScreen(state.prevScreen === 'stops' ? 'stops' : 'plan',
                state.prevScreen === 'stops' ? 'Nearby Stops' : 'Plan Journey');
     return;
   }
 
   if (state.screen === 'stats') {
-    history.replaceState(null, '', ' ');
+    history.replaceState(null, '', '/');
     showScreen(state.prevScreen === 'stops' ? 'stops' : 'plan',
                state.prevScreen === 'stops' ? 'Nearby Stops' : 'Plan Journey');
     return;
@@ -53,6 +54,7 @@ $('back-btn').addEventListener('click', () => {
 });
 
 $('header-live-btn').addEventListener('click', () => {
+  history.replaceState(null, '', '/live');
   showScreen('live-map', 'Live Buses');
   openLiveMap();
 });
@@ -75,8 +77,15 @@ setupPlanInputHandlers((journey, allJourneys) => {
 function init() {
   state.favorites = loadFavorites();
 
-  if (location.hash === '#stats') {
+  if (location.pathname === '/stats') {
     openStats(7);
+    return;
+  }
+
+  if (location.pathname === '/live') {
+    history.replaceState(null, '', '/live');
+    showScreen('live-map', 'Live Buses');
+    openLiveMap();
     return;
   }
 

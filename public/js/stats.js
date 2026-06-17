@@ -194,7 +194,7 @@ function renderStats(data, activeDays) {
 export async function openStats(days = 7) {
   state.prevScreen = state.screen;
   showScreen('stats', 'Delay Stats');
-  history.replaceState(null, '', '#stats');
+  history.replaceState(null, '', '/stats');
   $('stats-list').innerHTML = '<p class="empty">Loading…</p>';
   try {
     const data = await fetch(`/api/stats?days=${days}`).then(response => response.json());

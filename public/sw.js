@@ -1,4 +1,4 @@
-const CACHE = 'vilnius-bus-v46';
+const CACHE = 'vilnius-bus-v47';
 
 self.addEventListener('install', e => { self.skipWaiting(); });
 
