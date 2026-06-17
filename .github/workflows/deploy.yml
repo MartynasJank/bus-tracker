@@ -11,18 +11,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Write SSH key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-
       - name: Copy files to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
-          key_path: ~/.ssh/deploy_key
+          key: ${{ secrets.SSH_KEY }}
+          port: 2244
           source: "server.js,src,public,package.json,package-lock.json,import.js"
           target: "/var/www/bus-tracker"
 
@@ -31,7 +26,8 @@ jobs:
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
-          key_path: ~/.ssh/deploy_key
+          key: ${{ secrets.SSH_KEY }}
+          port: 2244
           script: |
             cd /var/www/bus-tracker
             npm install --omit=dev
