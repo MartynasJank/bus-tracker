@@ -1134,6 +1134,12 @@ header::after {
   white-space: nowrap;
 }
 
+.stat-no-gps-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .stat-see-all {
   display: block;
   width: 100%;

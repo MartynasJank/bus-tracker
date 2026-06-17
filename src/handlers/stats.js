@@ -49,6 +49,15 @@ export function handleStats(req, res, params) {
     ORDER BY day_of_week
   `).all(since);
 
+  const noGps = db.prepare(`
+    SELECT DISTINCT r.route_short_name, r.route_color, r.route_text_color
+    FROM routes r
+    WHERE r.route_short_name NOT IN (
+      SELECT DISTINCT route_short_name FROM delay_log WHERE observed_at > ?
+    )
+    ORDER BY r.route_short_name
+  `).all(since);
+
   respond(res, 200, {
     summary,
     by_route_late: byRouteLate,
@@ -56,5 +65,6 @@ export function handleStats(req, res, params) {
     by_route_punctual: byRoutePunctual,
     by_hour: byHour,
     by_dow: byDow,
+    no_gps: noGps,
   });
 }

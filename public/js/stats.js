@@ -93,7 +93,7 @@ function renderFullRouteList(list, title, routes, activeDays, seeAllKey) {
 
 function renderStats(data, activeDays) {
   const list = $('stats-list');
-  const { summary, by_route_late, by_route_early, by_route_punctual, by_hour, by_dow } = data;
+  const { summary, by_route_late, by_route_early, by_route_punctual, by_hour, by_dow, no_gps } = data;
 
   let html = `
     <div class="stat-range-row">
@@ -151,6 +151,17 @@ function renderStats(data, activeDays) {
       html += barChartRowHtml(day.avg_delay, maxDowDelay || 1, DAY_OF_WEEK_LABELS[day.day_of_week] ?? day.day_of_week, formatDelay(day.avg_delay));
     }
     html += `</div>`;
+  }
+
+  if (no_gps?.length) {
+    html += `<div class="stat-section"><div class="stat-section-title">No GPS Signal (${no_gps.length})</div>`;
+    html += `<div class="stat-no-gps-grid">`;
+    for (const r of no_gps) {
+      const bg = r.route_color ? `#${r.route_color}` : '#444';
+      const fg = r.route_text_color ? `#${r.route_text_color}` : '#fff';
+      html += `<span class="stat-route-chip" style="background:${bg};color:${fg};opacity:0.5">${escapeHtml(r.route_short_name)}</span>`;
+    }
+    html += `</div></div>`;
   }
 
   if (by_hour.length) {
