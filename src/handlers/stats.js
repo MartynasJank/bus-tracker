@@ -2,7 +2,7 @@ import db from '../db.js';
 import { respond } from '../utils.js';
 
 const LATE_SEC  =  60;  // delay_sec > LATE_SEC  → late
-const EARLY_SEC = -60;  // delay_sec < EARLY_SEC → early
+const EARLY_SEC = -10;  // delay_sec < EARLY_SEC → early
 
 export function handleStats(req, res, params) {
   const days  = Math.min(30, Math.max(1, parseInt(params.get('days') || '7')));
