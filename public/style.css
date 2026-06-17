@@ -1080,11 +1080,26 @@ header::after {
 .stat-bar-value {
   font-size: 12px;
   font-weight: 700;
-  width: 80px;
+  width: 72px;
   flex-shrink: 0;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   text-align: right;
+}
+
+.stat-bar-value-route {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  white-space: nowrap;
+}
+
+.stat-bar-late {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
 }
 
 /* ── Overlay ─────────────────────────────────────────────────────────────── */

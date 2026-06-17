@@ -107,7 +107,10 @@ function renderStats(data, activeDays) {
         <div class="stat-bar-track">
           <div class="stat-bar-fill" style="width:${fillPct}%;background:${delayColor(route.avg_delay)}"></div>
         </div>
-        <div class="stat-bar-value" style="color:${delayColor(route.avg_delay)}">${formatDelay(route.avg_delay)} · ${route.late_pct}%</div>
+        <div class="stat-bar-value stat-bar-value-route" style="color:${delayColor(route.avg_delay)}">
+          <span>${formatDelay(route.avg_delay)}</span>
+          <span class="stat-bar-late">${route.late_pct}% late</span>
+        </div>
       </div>`;
     }
     html += `</div>`;
