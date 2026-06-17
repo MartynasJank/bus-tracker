@@ -29,9 +29,9 @@ export function handleStats(req, res, params) {
     WHERE observed_at > ?
     GROUP BY route_short_name
   `;
-  const byRouteLate      = db.prepare(routeBase + ' HAVING count >= 20 ORDER BY avg_delay DESC').all(since);
-  const byRouteEarly     = db.prepare(routeBase + ' HAVING count >= 20 AND avg_delay < 0 ORDER BY avg_delay ASC').all(since);
-  const byRoutePunctual  = db.prepare(routeBase + ' HAVING count >= 20 ORDER BY ABS(avg_delay) ASC').all(since);
+  const byRouteLate      = db.prepare(routeBase + ' HAVING count >= 20 AND avg_delay > 60 ORDER BY avg_delay DESC').all(since);
+  const byRouteEarly     = db.prepare(routeBase + ' HAVING count >= 20 AND avg_delay < -60 ORDER BY avg_delay ASC').all(since);
+  const byRoutePunctual  = db.prepare(routeBase + ' HAVING count >= 20 AND ABS(avg_delay) <= 60 ORDER BY ABS(avg_delay) ASC').all(since);
 
   const byHour = db.prepare(`
     SELECT hour, ROUND(AVG(delay_sec)) AS avg_delay, COUNT(*) AS count
