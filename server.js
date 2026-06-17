@@ -36,7 +36,7 @@ function serveStatic(req, res, urlPath) {
         return fs.readFile(path.join(PUBLIC_DIR, 'index.html'), (err2, html) => {
           if (err2) return respond(res, 404, 'Not found');
           res.setHeader('Content-Type', 'text/html');
-          res.setHeader('Cache-Control', 'no-cache');
+          res.setHeader('Cache-Control', 'no-store');
           res.writeHead(200);
           res.end(html);
         });
@@ -45,8 +45,8 @@ function serveStatic(req, res, urlPath) {
     }
     const extension = path.extname(filePath);
     res.setHeader('Content-Type', MIME_TYPES[extension] || 'application/octet-stream');
-    if (extension === '.js' || extension === '.css') {
-      res.setHeader('Cache-Control', 'no-cache');
+    if (extension === '.js' || extension === '.css' || extension === '.html') {
+      res.setHeader('Cache-Control', 'no-store');
     }
     res.writeHead(200);
     res.end(data);
