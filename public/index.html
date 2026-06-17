@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vilnius Bus</title>
+  <meta name="theme-color" content="#0f0f0f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="/icon.svg">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <button id="back-btn" class="back-btn hidden" aria-label="Back">&#8592;</button>
+      <button id="header-live-btn" class="header-live-btn hidden" aria-label="Live map">Live</button>
+      <h1 id="header-title">Nearby Stops</h1>
+      <button id="header-stats-btn" class="header-stats-btn hidden" aria-label="Delay stats">Stats</button>
+      <button id="header-plan-btn" class="header-plan-btn" aria-label="Plan journey">Plan</button>
+      <a id="header-map-btn" class="header-map-btn hidden" target="_blank" rel="noopener" aria-label="Open in Maps">↗</a>
+    </header>
+
+    <div id="search-bar-wrap" class="search-wrap">
+      <input id="search" type="search" placeholder="Search stops…" autocomplete="off">
+    </div>
+
+    <div id="screen-stops" class="screen">
+      <div id="stops-list" class="list"></div>
+    </div>
+
+    <div id="screen-directions" class="screen">
+      <div id="directions-list" class="list"></div>
+    </div>
+
+    <div id="screen-map" class="screen">
+      <div id="map-container"></div>
+      <div id="map-info" class="map-info hidden">
+        <div class="map-info-item" id="map-speed">
+          <span class="map-info-value">—</span>
+          <span class="map-info-label">km/h</span>
+        </div>
+        <div class="map-info-divider"></div>
+        <div class="map-info-item" id="map-stops">
+          <span class="map-info-value">—</span>
+          <span class="map-info-label">stops left</span>
+        </div>
+        <div class="map-info-divider"></div>
+        <div class="map-info-item" id="map-arrival">
+          <span class="map-info-value">—</span>
+          <span class="map-info-label">arrival</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="screen-arrivals" class="screen">
+      <div id="chips-row" class="chips-row"></div>
+      <div id="arrivals-list" class="list"></div>
+      <div id="last-updated" class="last-updated"></div>
+    </div>
+
+    <div id="screen-plan" class="screen">
+      <div id="plan-search-wrap" class="plan-search-wrap">
+        <input id="plan-input" type="search" placeholder="Where to?" autocomplete="off">
+        <div id="plan-suggestions" class="plan-suggestions hidden"></div>
+      </div>
+      <div id="plan-recents" class="plan-recents hidden"></div>
+      <div id="plan-results" class="list plan-results"></div>
+    </div>
+
+    <div id="screen-live-map" class="screen">
+      <div id="live-map-container"></div>
+    </div>
+
+    <div id="screen-stats" class="screen">
+      <div class="list stats-list" id="stats-list"></div>
+    </div>
+
+    <div id="arrive-toast" class="arrive-toast hidden">Arriving…</div>
+
+    <div id="overlay" class="overlay hidden">
+      <div class="spinner"></div>
+      <p id="overlay-msg">Locating you…</p>
+    </div>
+  </div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "vilnius-bus",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "import": "node import.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.16",
+    "better-sqlite3": "^11.9.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.5.0"
+  }
+}
