@@ -5,7 +5,7 @@ import { showScreen } from './navigation.js';
 const DAY_OF_WEEK_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const PREVIEW_COUNT = 5;
 const LATE_SEC  =  60;
-const EARLY_SEC = -30;
+const EARLY_SEC = -60;
 
 function fmtThreshold(sec) {
   const abs = Math.abs(sec);
