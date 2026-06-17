@@ -70,7 +70,11 @@ header::after {
   font-weight: 700;
   letter-spacing: -0.2px;
   flex: 1;
+  min-width: 0;
   color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .back-btn {
