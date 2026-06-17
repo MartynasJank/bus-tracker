@@ -1112,10 +1112,26 @@ header::after {
 }
 
 .stat-threshold-note {
-  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 10px;
+  font-weight: 600;
   color: var(--text-muted);
-  text-align: center;
-  margin: -18px 0 24px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: -16px 0 28px;
+  opacity: 0.7;
+}
+.stat-threshold-note::before,
+.stat-threshold-note::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.stat-threshold-note span {
+  white-space: nowrap;
 }
 
 .stat-see-all {

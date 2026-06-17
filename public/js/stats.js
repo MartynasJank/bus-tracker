@@ -13,13 +13,12 @@ function delayColor(delaySeconds) {
 
 function formatDelay(delaySeconds) {
   if (delaySeconds == null) return '—';
-  const abs = Math.abs(Math.round(delaySeconds));
-  if (delaySeconds <= 0) {
-    const m = Math.floor(abs / 60), s = abs % 60;
-    return m ? `${m}m ${s}s early` : `${abs}s early`;
-  }
+  const rounded = Math.round(delaySeconds);
+  if (rounded === 0) return '0s';
+  const abs = Math.abs(rounded);
+  const sign = rounded < 0 ? '−' : '+';
   const m = Math.floor(abs / 60), s = abs % 60;
-  return m ? `+${m}m ${s}s` : `+${s}s`;
+  return m ? `${sign}${m}m ${s}s` : `${sign}${s}s`;
 }
 
 function formatCollectionDate(unixSeconds) {
@@ -114,15 +113,15 @@ function renderStats(data, activeDays) {
     </div>
     <div class="stat-card">
       <div class="stat-card-value" style="color:${(summary.late_pct ?? 0) > 30 ? 'var(--red)' : (summary.late_pct ?? 0) > 15 ? 'var(--amber)' : 'var(--green)'}">${summary.late_pct ?? 0}%</div>
-      <div class="stat-card-label">late (&gt;1 min)</div>
+      <div class="stat-card-label">late &gt;1 min</div>
     </div>
     <div class="stat-card">
       <div class="stat-card-value" style="color:${(summary.early_pct ?? 0) > 10 ? 'var(--red)' : (summary.early_pct ?? 0) > 3 ? 'var(--amber)' : 'var(--green)'}">${summary.early_pct ?? 0}%</div>
-      <div class="stat-card-label">early (&gt;1 min)</div>
+      <div class="stat-card-label">early &gt;1 min</div>
     </div>
     <div class="stat-card">
       <div class="stat-card-value" style="color:${(summary.punctual_pct ?? 0) >= 60 ? 'var(--green)' : (summary.punctual_pct ?? 0) >= 40 ? 'var(--amber)' : 'var(--red)'}">${summary.punctual_pct ?? 0}%</div>
-      <div class="stat-card-label">punctual (±1 min)</div>
+      <div class="stat-card-label">punctual ±1 min</div>
     </div>
     <div class="stat-card">
       <div class="stat-card-value">${summary.total?.toLocaleString() ?? '0'}</div>
@@ -130,7 +129,7 @@ function renderStats(data, activeDays) {
     </div>
   </div>`;
 
-  html += `<p class="stat-threshold-note">Late &gt;1 min · Early &gt;1 min · Punctual within ±1 min</p>`;
+  html += `<div class="stat-threshold-note"><span>Late &gt;1m · Punctual ±1m · Early &gt;1m</span></div>`;
 
   if (!summary.total) {
     html += `<p class="empty">No data yet — check back after a few minutes.</p>`;
@@ -139,17 +138,6 @@ function renderStats(data, activeDays) {
       button.addEventListener('click', () => openStats(parseInt(button.dataset.days)))
     );
     return;
-  }
-
-  if (by_hour.length) {
-    const maxHourDelay = Math.max(...by_hour.map(h => Math.abs(h.avg_delay)));
-    html += `<div class="stat-section"><div class="stat-section-title">By Hour</div>`;
-    for (let hour = 0; hour < 24; hour++) {
-      const row = by_hour.find(h => h.hour === hour);
-      if (!row) continue;
-      html += barChartRowHtml(row.avg_delay, maxHourDelay || 1, `${String(hour).padStart(2, '0')}:00`, formatDelay(row.avg_delay));
-    }
-    html += `</div>`;
   }
 
   html += routeSectionHtml('Most Late', by_route_late, 'late');
@@ -161,6 +149,17 @@ function renderStats(data, activeDays) {
     html += `<div class="stat-section"><div class="stat-section-title">By Day</div>`;
     for (const day of by_dow) {
       html += barChartRowHtml(day.avg_delay, maxDowDelay || 1, DAY_OF_WEEK_LABELS[day.day_of_week] ?? day.day_of_week, formatDelay(day.avg_delay));
+    }
+    html += `</div>`;
+  }
+
+  if (by_hour.length) {
+    const maxHourDelay = Math.max(...by_hour.map(h => Math.abs(h.avg_delay)));
+    html += `<div class="stat-section"><div class="stat-section-title">By Hour</div>`;
+    for (let hour = 0; hour < 24; hour++) {
+      const row = by_hour.find(h => h.hour === hour);
+      if (!row) continue;
+      html += barChartRowHtml(row.avg_delay, maxHourDelay || 1, `${String(hour).padStart(2, '0')}:00`, formatDelay(row.avg_delay));
     }
     html += `</div>`;
   }
