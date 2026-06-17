@@ -68,9 +68,10 @@ function routeBarRowHtml(route, maxDelay, sublabel) {
 }
 
 function routeSublabel(seeAllKey, route) {
-  if (seeAllKey === 'late') return `${route.late_pct}% late`;
-  if (seeAllKey === 'early') return `${route.early_pct}% early`;
-  return null;
+  const obs = route.count.toLocaleString();
+  if (seeAllKey === 'late') return `${route.late_pct}% late · ${obs} obs`;
+  if (seeAllKey === 'early') return `${route.early_pct}% early · ${obs} obs`;
+  return `${obs} obs`;
 }
 
 function routeSectionHtml(title, routes, seeAllKey) {
