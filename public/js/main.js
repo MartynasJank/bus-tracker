@@ -81,8 +81,13 @@ setupPlanInputHandlers((journey, allJourneys) => {
 function init() {
   state.favorites = loadFavorites();
 
+  const colorsReady = fetch('/api/routes/colors')
+    .then(response => response.json())
+    .then(data => { state.routeColors = data; })
+    .catch(() => {});
+
   if (location.pathname === '/stats') {
-    openStats(7);
+    colorsReady.then(() => openStats(7));
     return;
   }
 
