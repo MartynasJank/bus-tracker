@@ -71,3 +71,64 @@ export function handleStats(req, res, params) {
     no_gps: noGps,
   });
 }
+
+export function handleStatsRoute(req, res, params) {
+  const days  = Math.min(30, Math.max(1, parseInt(params.get('days') || '7')));
+  const route = params.get('route');
+  if (!route) return respond(res, 400, { error: 'route required' });
+  const since = Math.floor(Date.now() / 1000) - days * 86400;
+
+  const summary = db.prepare(`
+    SELECT
+      COUNT(*) AS total,
+      ROUND(AVG(delay_sec)) AS avg_delay,
+      ROUND(AVG(CASE WHEN delay_sec > ${LATE_SEC}  THEN delay_sec END)) AS avg_late_sec,
+      ROUND(AVG(CASE WHEN delay_sec < ${EARLY_SEC} THEN delay_sec END)) AS avg_early_sec,
+      ROUND(SUM(CASE WHEN delay_sec > ${LATE_SEC}  THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) AS late_pct,
+      ROUND(SUM(CASE WHEN delay_sec < ${EARLY_SEC} THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) AS early_pct,
+      ROUND(SUM(CASE WHEN delay_sec BETWEEN ${EARLY_SEC} AND ${LATE_SEC} THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) AS punctual_pct
+    FROM delay_log
+    WHERE observed_at > ? AND route_short_name = ?
+  `).get(since, route);
+
+  const byHour = db.prepare(`
+    SELECT hour, ROUND(AVG(delay_sec)) AS avg_delay, COUNT(*) AS count
+    FROM delay_log WHERE observed_at > ? AND route_short_name = ?
+    GROUP BY hour ORDER BY hour
+  `).all(since, route);
+
+  const byDow = db.prepare(`
+    SELECT day_of_week, ROUND(AVG(delay_sec)) AS avg_delay, COUNT(*) AS count
+    FROM delay_log WHERE observed_at > ? AND route_short_name = ?
+    GROUP BY day_of_week ORDER BY day_of_week
+  `).all(since, route);
+
+  respond(res, 200, { summary, by_hour: byHour, by_dow: byDow });
+}
+
+export function handleStatsBreakdown(req, res, params) {
+  const days  = Math.min(30, Math.max(1, parseInt(params.get('days') || '7')));
+  const since = Math.floor(Date.now() / 1000) - days * 86400;
+  const hour  = params.get('hour');
+  const dow   = params.get('dow');
+
+  if (hour === null && dow === null) return respond(res, 400, { error: 'hour or dow required' });
+
+  const filter = hour !== null ? `AND hour = ${parseInt(hour)}` : `AND day_of_week = ${parseInt(dow)}`;
+
+  const routes = db.prepare(`
+    SELECT
+      route_short_name,
+      COUNT(*) AS count,
+      ROUND(AVG(delay_sec)) AS avg_delay,
+      ROUND(SUM(CASE WHEN delay_sec > ${LATE_SEC}  THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) AS late_pct,
+      ROUND(SUM(CASE WHEN delay_sec < ${EARLY_SEC} THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) AS early_pct
+    FROM delay_log
+    WHERE observed_at > ? ${filter}
+    GROUP BY route_short_name
+    HAVING count >= 5
+    ORDER BY avg_delay DESC
+  `).all(since);
+
+  respond(res, 200, routes);
+}
