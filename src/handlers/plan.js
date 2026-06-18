@@ -2,6 +2,8 @@ import db from '../db.js';
 import { haversine, respond, vilniusSecondsSinceMidnight, gtfsTimeToSeconds } from '../utils.js';
 import { getServiceIds } from '../schedule.js';
 import { stopsNear } from './stops.js';
+import gpsCache from '../gps-cache.js';
+import { parseGpsText } from '../collector.js';
 
 const WALK_SPEED_MPS = 80; // metres per minute (~4.8 km/h)
 
@@ -43,6 +45,22 @@ export async function handlePlan(req, res, params) {
     String(nowSec % 60).padStart(2, '0'),
   ].join(':');
 
+  // Build live delay map from GPS cache: "route:tripStartSec" → delay_sec
+  const liveDelay = {};
+  if (gpsCache.data) {
+    for (const v of parseGpsText(gpsCache.data)) {
+      liveDelay[`${v.route}:${v.tripStartSec}`] = v.delay;
+    }
+  }
+
+  // Look back up to 10 min so late buses still appear in the query
+  const lookbackSec = Math.max(0, nowSec - 600);
+  const lookbackTimeStr = [
+    String(Math.floor(lookbackSec / 3600)).padStart(2, '0'),
+    String(Math.floor((lookbackSec % 3600) / 60)).padStart(2, '0'),
+    String(lookbackSec % 60).padStart(2, '0'),
+  ].join(':');
+
   const originPlaceholders  = originStops.map(() => '?').join(',');
   const destPlaceholders    = destStops.map(() => '?').join(',');
   const servicePlaceholders = serviceIds.map(() => '?').join(',');
@@ -69,7 +87,7 @@ export async function handlePlan(req, res, params) {
       AND st1.departure_time >= ?
     ORDER BY st1.departure_time
     LIMIT 300
-  `).all(...destStops.map(stop => stop.stop_id), ...originStops.map(stop => stop.stop_id), ...serviceIds, nowTimeStr);
+  `).all(...destStops.map(stop => stop.stop_id), ...originStops.map(stop => stop.stop_id), ...serviceIds, lookbackTimeStr);
 
   // Keep up to 3 departures per route
   const routeDepartureCount = {};
@@ -81,7 +99,10 @@ export async function handlePlan(req, res, params) {
 
     const travelMinutes  = Math.round((gtfsTimeToSeconds(row.alight_time) - gtfsTimeToSeconds(row.board_time)) / 60);
     const countdownSecs  = gtfsTimeToSeconds(row.board_time) + countdownOffset - nowSec;
-    if (countdownSecs < -60) continue;
+    const tripKey = `${row.route_short_name}:${gtfsTimeToSeconds(row.trip_start_time)}`;
+    const liveDelaySec = liveDelay[tripKey] ?? 0;
+    const actualCountdown = countdownSecs + liveDelaySec;
+    if (actualCountdown < -300) continue; // departed more than 5 min ago in actual time
 
     candidates.push({
       route_short_name: row.route_short_name,
@@ -96,6 +117,7 @@ export async function handlePlan(req, res, params) {
       alight_time:      row.alight_time,
       travel_min:       travelMinutes,
       countdown_seconds: countdownSecs,
+      live_delay_sec:    liveDelaySec,
       _boardKey:    `${row.board_lat},${row.board_lon}`,
       _alightKey:   `${row.alight_lat},${row.alight_lon}`,
       _boardCoords: [fromLat, fromLon, row.board_lat, row.board_lon],

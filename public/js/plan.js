@@ -52,16 +52,22 @@ export function renderPlanResults(journeys) {
   container.innerHTML = journeys.map((journey, index) => {
     const bg          = journey.route_color      ? `#${journey.route_color}`      : 'var(--accent)';
     const fg          = journey.route_text_color ? `#${journey.route_text_color}` : '#000';
-    const countdown   = formatPlanCountdown(journey.countdown_seconds);
-    const arrivalSecs = journey.countdown_seconds + (journey.travel_min + journey.alight_walk_min) * 60;
-    const boardTime   = journey.board_time.slice(0, 5);
-    return `<div class="plan-card" data-idx="${index}" data-base-countdown="${journey.countdown_seconds}" data-arrival-offset="${journey.travel_min * 60 + journey.alight_walk_min * 60}">
+    const delay        = journey.live_delay_sec ?? 0;
+    const actualCdown  = journey.countdown_seconds + delay;
+    const leftEarly    = delay < -30 && actualCdown < 0;
+    const earlyAbs     = Math.abs(delay);
+    const earlyMin     = Math.floor(earlyAbs / 60), earlySec = earlyAbs % 60;
+    const earlyLabel   = earlyMin ? `${earlyMin}m ${earlySec}s early` : `${earlySec}s early`;
+    const countdown    = leftEarly ? `Left ${earlyLabel}` : formatPlanCountdown(journey.countdown_seconds);
+    const arrivalSecs  = journey.countdown_seconds + (journey.travel_min + journey.alight_walk_min) * 60;
+    const boardTime    = journey.board_time.slice(0, 5);
+    return `<div class="plan-card${leftEarly ? ' plan-card-left-early' : ''}" data-idx="${index}" data-base-countdown="${journey.countdown_seconds}" data-arrival-offset="${journey.travel_min * 60 + journey.alight_walk_min * 60}">
       <div class="plan-card-top">
         <span class="plan-route-badge" style="background:${bg};color:${fg}">${escapeHtml(journey.route_short_name)}</span>
         <span class="plan-headsign">${escapeHtml(journey.headsign)}</span>
         <div class="plan-countdown-wrap">
-          <span class="plan-countdown">${countdown}</span>
-          <span class="plan-arrives">arr. ${formatPlanCountdown(arrivalSecs)}</span>
+          <span class="plan-countdown${leftEarly ? ' plan-countdown-early' : ''}">${countdown}</span>
+          ${leftEarly ? '' : `<span class="plan-arrives">arr. ${formatPlanCountdown(arrivalSecs)}</span>`}
         </div>
       </div>
       <div class="plan-legs">

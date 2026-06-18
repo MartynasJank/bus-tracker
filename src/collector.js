@@ -10,7 +10,7 @@ const RETENTION_DAYS = 30;
 
 const busLastSeen = new Map();
 
-function parseGpsText(text) {
+export function parseGpsText(text) {
   return text.split('\n')
     .filter(line => line.startsWith('Autobusai,'))
     .map(line => {

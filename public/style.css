@@ -312,6 +312,8 @@ header::after {
   transition: border-color 0.15s, background 0.15s;
 }
 .plan-card:active { background: var(--surface2); border-color: var(--border-hi); }
+.plan-card-left-early { opacity: 0.6; }
+.plan-countdown-early { color: var(--amber); font-size: 13px !important; }
 
 .plan-card-top {
   display: flex;
