@@ -141,7 +141,7 @@ async function openRouteBreakdown(routeName, days, backFn) {
       const maxDow = Math.max(...by_dow.map(d => Math.abs(d.avg_delay)));
       html += `<div class="stat-section"><div class="stat-section-title">By Day</div>`;
       for (const day of by_dow) {
-        html += barChartRowHtml(day.avg_delay, maxDow || 1, DAY_OF_WEEK_LABELS[day.day_of_week] ?? day.day_of_week, formatDelay(day.avg_delay));
+        html += barChartRowHtml(day.avg_delay, maxDow || 1, DAY_OF_WEEK_LABELS[day.day_of_week] ?? day.day_of_week, `${formatDelay(day.avg_delay)} · ${day.count} obs`);
       }
       html += `</div>`;
     }
@@ -151,7 +151,7 @@ async function openRouteBreakdown(routeName, days, backFn) {
       for (let hour = 0; hour < 24; hour++) {
         const row = by_hour.find(h => h.hour === hour);
         if (!row) continue;
-        html += barChartRowHtml(row.avg_delay, maxHour || 1, `${String(hour).padStart(2, '0')}:00`, formatDelay(row.avg_delay));
+        html += barChartRowHtml(row.avg_delay, maxHour || 1, `${String(hour).padStart(2, '0')}:00`, `${formatDelay(row.avg_delay)} · ${row.count} obs`);
       }
       html += `</div>`;
     }
