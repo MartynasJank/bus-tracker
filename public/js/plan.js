@@ -76,6 +76,7 @@ export function renderPlanResults(journeys) {
         <span class="plan-headsign">${escapeHtml(journey.headsign)}</span>
         <div class="plan-countdown-wrap">
           <span class="plan-countdown${leftEarly ? ' plan-countdown-early' : ''}">${countdown}</span>
+          <span class="plan-board-time">${boardTime}</span>
           ${delayBadge}
           ${leftEarly ? '' : `<span class="plan-arrives">arr. ${formatPlanCountdown(arrivalSecs)}</span>`}
         </div>
@@ -89,7 +90,7 @@ export function renderPlanResults(journeys) {
       </div>
       <div class="plan-total">
         <span>${escapeHtml(journey.board_stop.name)} → ${escapeHtml(journey.alight_stop.name)}</span>
-        <span style="flex-shrink:0">${boardTime} · ${journey.total_min} min total</span>
+        <span style="flex-shrink:0">${journey.total_min} min total</span>
       </div>
     </div>`;
   }).join('');

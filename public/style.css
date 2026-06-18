@@ -354,6 +354,12 @@ header::after {
   color: var(--text-muted);
   font-weight: 500;
 }
+.plan-board-time {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
 .plan-delay-badge {
   font-size: 10px;
   font-weight: 600;
