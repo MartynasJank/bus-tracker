@@ -1,5 +1,5 @@
 import db from '../db.js';
-import { haversine, respond, vilniusSecondsSinceMidnight, gtfsTimeToSeconds } from '../utils.js';
+import { haversine, bearing, respond, vilniusSecondsSinceMidnight, gtfsTimeToSeconds } from '../utils.js';
 import { getServiceIds } from '../schedule.js';
 import { stopsNear } from './stops.js';
 import gpsCache from '../gps-cache.js';
@@ -45,11 +45,14 @@ export async function handlePlan(req, res, params) {
     String(nowSec % 60).padStart(2, '0'),
   ].join(':');
 
-  // Build live delay map from GPS cache: "route:tripStartSec" → delay_sec
-  const liveDelay = {};
+  // Build live delay and position maps from GPS cache
+  const liveDelay    = {};
+  const livePosition = {};
   if (gpsCache.data) {
     for (const v of parseGpsText(gpsCache.data)) {
-      liveDelay[`${v.route}:${v.tripStartSec}`] = v.delay;
+      const key = `${v.route}:${v.tripStartSec}`;
+      liveDelay[key]    = v.delay;
+      livePosition[key] = { lat: v.lat, lon: v.lon, azimuth: v.azimuth, speed: v.speed };
     }
   }
 
@@ -104,6 +107,19 @@ export async function handlePlan(req, res, params) {
     const actualCountdown = countdownSecs + liveDelaySec;
     if (countdownSecs < 0 && liveDelaySec <= 0) continue; // departed on schedule, not in GPS feed
     if (actualCountdown < -60) continue; // departed more than 1 min ago in actual time
+
+    // If past scheduled time, check GPS position — skip if bus has already passed the board stop
+    if (countdownSecs < 0) {
+      const pos = livePosition[tripKey];
+      if (pos && pos.speed > 0) {
+        const distToStop = haversine(pos.lat, pos.lon, row.board_lat, row.board_lon);
+        if (distToStop > 200) {
+          const bearingToStop = bearing(pos.lat, pos.lon, row.board_lat, row.board_lon);
+          const angleDiff = Math.abs(((bearingToStop - pos.azimuth + 540) % 360) - 180);
+          if (angleDiff > 90) continue; // board stop is behind the bus
+        }
+      }
+    }
 
     candidates.push({
       route_short_name: row.route_short_name,

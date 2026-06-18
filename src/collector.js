@@ -21,6 +21,9 @@ export function parseGpsText(text) {
         tripStartSec: (parseInt(fields[8]) || 0) * 60,
         delay:        parseInt(fields[9]) || 0,
         speed:        parseInt(fields[6]) || 0,
+        azimuth:      parseInt(fields[7]) || 0,
+        lat:          parseInt(fields[5]) / 1e6,
+        lon:          parseInt(fields[4]) / 1e6,
       };
     })
     .filter(Boolean);
