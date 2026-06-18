@@ -61,12 +61,22 @@ export function renderPlanResults(journeys) {
     const countdown    = leftEarly ? `Left ${earlyLabel}` : formatPlanCountdown(journey.countdown_seconds);
     const arrivalSecs  = journey.countdown_seconds + (journey.travel_min + journey.alight_walk_min) * 60;
     const boardTime    = journey.board_time.slice(0, 5);
+    let delayBadge = '';
+    if (!leftEarly && delay >= 60) {
+      const m = Math.floor(delay / 60), s = delay % 60;
+      delayBadge = `<span class="plan-delay-badge plan-delay-late">${m}m${s ? ` ${s}s` : ''} late</span>`;
+    } else if (!leftEarly && delay <= -30) {
+      const abs = Math.abs(delay);
+      const m = Math.floor(abs / 60), s = abs % 60;
+      delayBadge = `<span class="plan-delay-badge plan-delay-early">${m ? `${m}m${s ? ` ${s}s` : ''}` : `${s}s`} early</span>`;
+    }
     return `<div class="plan-card${leftEarly ? ' plan-card-left-early' : ''}" data-idx="${index}" data-base-countdown="${journey.countdown_seconds}" data-arrival-offset="${journey.travel_min * 60 + journey.alight_walk_min * 60}">
       <div class="plan-card-top">
         <span class="plan-route-badge" style="background:${bg};color:${fg}">${escapeHtml(journey.route_short_name)}</span>
         <span class="plan-headsign">${escapeHtml(journey.headsign)}</span>
         <div class="plan-countdown-wrap">
           <span class="plan-countdown${leftEarly ? ' plan-countdown-early' : ''}">${countdown}</span>
+          ${delayBadge}
           ${leftEarly ? '' : `<span class="plan-arrives">arr. ${formatPlanCountdown(arrivalSecs)}</span>`}
         </div>
       </div>

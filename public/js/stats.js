@@ -33,11 +33,11 @@ function formatCollectionDate(unixSeconds) {
   return new Date(unixSeconds * 1000).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 
-function barChartRowHtml(value, maxValue, label, sublabel) {
+function barChartRowHtml(value, maxValue, label, sublabel, drillAttr = '') {
   const percentage = maxValue > 0 ? Math.min(100, Math.round((Math.abs(value) / maxValue) * 100)) : 0;
   const color = delayColor(value);
   return `
-    <div class="stat-bar-row">
+    <div class="stat-bar-row${drillAttr ? ' stat-bar-row-drillable' : ''}" ${drillAttr}>
       <div class="stat-bar-label">${escapeHtml(label)}</div>
       <div class="stat-bar-track">
         <div class="stat-bar-fill" style="width:${percentage}%;background:${color}"></div>
@@ -53,7 +53,7 @@ function routeBarRowHtml(route, maxDelay, sublabel) {
   const fillPct = maxDelay > 0
     ? Math.min(100, Math.round(Math.abs(route.avg_delay) / maxDelay * 100)) : 0;
   return `
-    <div class="stat-bar-row">
+    <div class="stat-bar-row stat-bar-row-drillable" data-route="${escapeHtml(route.route_short_name)}">
       <div class="stat-bar-label stat-bar-label-route">
         <span class="stat-route-chip" style="background:${bg};color:${fg}">${escapeHtml(route.route_short_name)}</span>
       </div>
@@ -87,6 +87,108 @@ function routeSectionHtml(title, routes, seeAllKey) {
   return html;
 }
 
+function wireRouteClicks(container, days, backFn) {
+  container.querySelectorAll('[data-route]').forEach(row => {
+    row.addEventListener('click', () => openRouteBreakdown(row.dataset.route, days, backFn));
+  });
+}
+
+async function openRouteBreakdown(routeName, days, backFn) {
+  const list = $('stats-list');
+  state.statsFullList = true;
+  const routeInfo = state.routeColors[routeName];
+  const bg = routeInfo?.color ? `#${routeInfo.color}` : '#444';
+  const fg = routeInfo?.text ? `#${routeInfo.text}` : '#fff';
+  const chipHtml = `<span class="stat-route-chip" style="background:${bg};color:${fg}">${escapeHtml(routeName)}</span>`;
+  list.innerHTML = `
+    <button class="stat-back-btn">← Back</button>
+    <div class="stat-route-breakdown-header">${chipHtml}</div>
+    <p class="empty">Loading…</p>`;
+  list.querySelector('.stat-back-btn').addEventListener('click', backFn);
+  try {
+    const data = await fetch(`/api/stats/route?days=${days}&route=${encodeURIComponent(routeName)}`).then(r => r.json());
+    const { summary, by_hour, by_dow } = data;
+    let html = `
+      <button class="stat-back-btn">← Back</button>
+      <div class="stat-route-breakdown-header">${chipHtml}</div>
+      <div class="stat-cards">
+        <div class="stat-card">
+          <div class="stat-card-value" style="color:${delayColor(summary.avg_late_sec)}">${formatDelay(summary.avg_late_sec)}</div>
+          <div class="stat-card-label">avg late</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-value" style="color:${delayColor(summary.avg_early_sec)}">${formatDelay(summary.avg_early_sec)}</div>
+          <div class="stat-card-label">avg early</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-value" style="color:${(summary.late_pct ?? 0) > 30 ? 'var(--red)' : (summary.late_pct ?? 0) > 15 ? 'var(--amber)' : 'var(--green)'}">${summary.late_pct ?? 0}%</div>
+          <div class="stat-card-label">late</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-value" style="color:${(summary.early_pct ?? 0) > 10 ? 'var(--red)' : (summary.early_pct ?? 0) > 3 ? 'var(--amber)' : 'var(--green)'}">${summary.early_pct ?? 0}%</div>
+          <div class="stat-card-label">early</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-value" style="color:${(summary.punctual_pct ?? 0) >= 60 ? 'var(--green)' : (summary.punctual_pct ?? 0) >= 40 ? 'var(--amber)' : 'var(--red)'}">${summary.punctual_pct ?? 0}%</div>
+          <div class="stat-card-label">punctual</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-value">${summary.total?.toLocaleString() ?? '0'}</div>
+          <div class="stat-card-label">observations</div>
+        </div>
+      </div>`;
+    if (by_dow.length) {
+      const maxDow = Math.max(...by_dow.map(d => Math.abs(d.avg_delay)));
+      html += `<div class="stat-section"><div class="stat-section-title">By Day</div>`;
+      for (const day of by_dow) {
+        html += barChartRowHtml(day.avg_delay, maxDow || 1, DAY_OF_WEEK_LABELS[day.day_of_week] ?? day.day_of_week, formatDelay(day.avg_delay));
+      }
+      html += `</div>`;
+    }
+    if (by_hour.length) {
+      const maxHour = Math.max(...by_hour.map(h => Math.abs(h.avg_delay)));
+      html += `<div class="stat-section"><div class="stat-section-title">By Hour</div>`;
+      for (let hour = 0; hour < 24; hour++) {
+        const row = by_hour.find(h => h.hour === hour);
+        if (!row) continue;
+        html += barChartRowHtml(row.avg_delay, maxHour || 1, `${String(hour).padStart(2, '0')}:00`, formatDelay(row.avg_delay));
+      }
+      html += `</div>`;
+    }
+    list.innerHTML = html;
+    list.querySelector('.stat-back-btn').addEventListener('click', backFn);
+  } catch {
+    list.querySelector('p').textContent = 'Failed to load.';
+  }
+}
+
+async function openStatsBreakdown(type, value, label, days) {
+  const list = $('stats-list');
+  state.statsFullList = true;
+  list.innerHTML = `
+    <button class="stat-back-btn">← Back to stats</button>
+    <div class="stat-section">
+      <div class="stat-section-title">${escapeHtml(label)}</div>
+      <p class="empty">Loading…</p>
+    </div>`;
+  list.querySelector('.stat-back-btn').addEventListener('click', () => openStats(days));
+  try {
+    const param  = type === 'hour' ? `hour=${value}` : `dow=${value}`;
+    const routes = await fetch(`/api/stats/breakdown?days=${days}&${param}`).then(r => r.json());
+    const section = list.querySelector('.stat-section');
+    if (!routes.length) {
+      section.innerHTML = `<div class="stat-section-title">${escapeHtml(label)}</div><p class="empty">No data.</p>`;
+      return;
+    }
+    const maxDelay = Math.max(...routes.map(r => Math.abs(r.avg_delay)));
+    section.innerHTML = `<div class="stat-section-title">${escapeHtml(label)}</div>` +
+      routes.map(r => routeBarRowHtml(r, maxDelay, `${r.late_pct}% late · ${r.count.toLocaleString()} obs`)).join('');
+    wireRouteClicks(list, days, () => openStatsBreakdown(type, value, label, days));
+  } catch {
+    list.querySelector('.stat-section').innerHTML += `<p class="empty">Failed to load.</p>`;
+  }
+}
+
 function renderFullRouteList(list, title, routes, activeDays, seeAllKey) {
   state.statsFullList = true;
   const maxDelay = Math.max(...routes.map(r => Math.abs(r.avg_delay)));
@@ -98,6 +200,7 @@ function renderFullRouteList(list, title, routes, activeDays, seeAllKey) {
     </div>`;
   list.innerHTML = html;
   list.querySelector('.stat-back-btn').addEventListener('click', () => openStats(activeDays));
+  wireRouteClicks(list, activeDays, () => openStats(activeDays));
 }
 
 function renderStats(data, activeDays) {
@@ -157,7 +260,7 @@ function renderStats(data, activeDays) {
     const maxDowDelay = Math.max(...by_dow.map(d => Math.abs(d.avg_delay)));
     html += `<div class="stat-section"><div class="stat-section-title">By Day</div>`;
     for (const day of by_dow) {
-      html += barChartRowHtml(day.avg_delay, maxDowDelay || 1, DAY_OF_WEEK_LABELS[day.day_of_week] ?? day.day_of_week, formatDelay(day.avg_delay));
+      html += barChartRowHtml(day.avg_delay, maxDowDelay || 1, DAY_OF_WEEK_LABELS[day.day_of_week] ?? day.day_of_week, formatDelay(day.avg_delay), `data-drill="dow:${day.day_of_week}"`);
     }
     html += `</div>`;
   }
@@ -179,7 +282,7 @@ function renderStats(data, activeDays) {
     for (let hour = 0; hour < 24; hour++) {
       const row = by_hour.find(h => h.hour === hour);
       if (!row) continue;
-      html += barChartRowHtml(row.avg_delay, maxHourDelay || 1, `${String(hour).padStart(2, '0')}:00`, formatDelay(row.avg_delay));
+      html += barChartRowHtml(row.avg_delay, maxHourDelay || 1, `${String(hour).padStart(2, '0')}:00`, formatDelay(row.avg_delay), `data-drill="hour:${hour}"`);
     }
     html += `</div>`;
   }
@@ -198,6 +301,18 @@ function renderStats(data, activeDays) {
       renderFullRouteList(list, title, routes, activeDays, key);
     });
   });
+
+  list.querySelectorAll('[data-drill]').forEach(row => {
+    row.addEventListener('click', () => {
+      const [type, value] = row.dataset.drill.split(':');
+      const label = type === 'hour'
+        ? `${String(parseInt(value)).padStart(2, '0')}:00–${String(parseInt(value) + 1).padStart(2, '0')}:00`
+        : DAY_OF_WEEK_LABELS[parseInt(value)];
+      openStatsBreakdown(type, parseInt(value), label, activeDays);
+    });
+  });
+
+  wireRouteClicks(list, activeDays, () => openStats(activeDays));
 }
 
 export async function openStats(days = 7) {

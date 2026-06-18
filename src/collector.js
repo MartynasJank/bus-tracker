@@ -49,6 +49,8 @@ async function collectDelaySnapshot() {
     const hourOfDay  = Math.floor(vilniusSecondsSinceMidnight() / 3600);
 
     const vehiclesToInsert = parseGpsText(text).filter(vehicle => {
+      if (vehicle.tripStartSec === 0) return false;      // no valid trip assignment
+      if (Math.abs(vehicle.delay) > 1800) return false; // discard implausible GPS delay readings
       const key = `${vehicle.route}:${vehicle.tripStartSec}`;
       if (nowUnix - (busLastSeen.get(key) || 0) < DEDUP_WINDOW_SEC) return false;
       busLastSeen.set(key, nowUnix);

@@ -8,7 +8,7 @@ import { handlePlan } from './src/handlers/plan.js';
 import { handleGps } from './src/handlers/gps.js';
 import { handleTripShape, handleTripStops } from './src/handlers/trips.js';
 import { handleRouteColors } from './src/handlers/routes.js';
-import { handleStats } from './src/handlers/stats.js';
+import { handleStats, handleStatsBreakdown, handleStatsRoute } from './src/handlers/stats.js';
 import { startCollector } from './src/collector.js';
 
 const __dirname  = path.dirname(fileURLToPath(import.meta.url));
@@ -63,6 +63,8 @@ const server = http.createServer((req, res) => {
   if (pathname === '/api/gps')                return handleGps(req, res);
   if (pathname === '/api/routes/colors')      return handleRouteColors(req, res);
   if (pathname === '/api/stats')              return handleStats(req, res, url.searchParams);
+  if (pathname === '/api/stats/breakdown')    return handleStatsBreakdown(req, res, url.searchParams);
+  if (pathname === '/api/stats/route')        return handleStatsRoute(req, res, url.searchParams);
   if (pathname === '/api/plan')               return handlePlan(req, res, url.searchParams).catch(error => respond(res, 500, { error: error.message }));
 
   const directionsMatch = pathname.match(/^\/api\/stops\/(\d+)\/directions$/);

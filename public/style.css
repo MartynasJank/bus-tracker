@@ -354,6 +354,12 @@ header::after {
   color: var(--text-muted);
   font-weight: 500;
 }
+.plan-delay-badge {
+  font-size: 10px;
+  font-weight: 600;
+}
+.plan-delay-late  { color: var(--amber); }
+.plan-delay-early { color: var(--green); }
 
 .plan-legs {
   display: flex;
@@ -1045,6 +1051,14 @@ header::after {
   gap: 10px;
   margin-bottom: 9px;
 }
+.stat-bar-row-drillable {
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 3px 4px;
+  margin: 0 -4px 6px;
+  transition: background 0.15s;
+}
+.stat-bar-row-drillable:hover { background: var(--surface2); }
 
 .stat-bar-label {
   font-size: 12px;
@@ -1173,6 +1187,14 @@ header::after {
   padding: 4px 2px 16px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+}
+.stat-route-breakdown-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  font-size: 20px;
+  font-weight: 800;
 }
 
 /* ── Overlay ─────────────────────────────────────────────────────────────── */
