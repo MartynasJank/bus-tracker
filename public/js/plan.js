@@ -60,6 +60,8 @@ export function renderPlanResults(journeys) {
     const earlyLabel   = earlyMin ? `${earlyMin}m ${earlySec}s early` : `${earlySec}s early`;
     const countdown    = leftEarly ? `Left ${earlyLabel}` : formatPlanCountdown(journey.countdown_seconds);
     const arrivalSecs  = journey.countdown_seconds + (journey.travel_min + journey.alight_walk_min) * 60;
+    const arrivalClock = new Date(Date.now() + arrivalSecs * 1000)
+      .toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
     const boardTime    = journey.board_time.slice(0, 5);
     let delayBadge = '';
     if (!leftEarly && delay >= 60) {
@@ -78,7 +80,7 @@ export function renderPlanResults(journeys) {
           <span class="plan-countdown${leftEarly ? ' plan-countdown-early' : ''}">${countdown}</span>
           <span class="plan-board-time">${boardTime}</span>
           ${delayBadge}
-          ${leftEarly ? '' : `<span class="plan-arrives">arr. ${formatPlanCountdown(arrivalSecs)}</span>`}
+          ${leftEarly ? '' : `<span class="plan-arrives">arr. ${formatPlanCountdown(arrivalSecs)} · ${arrivalClock}</span>`}
         </div>
       </div>
       <div class="plan-legs">
