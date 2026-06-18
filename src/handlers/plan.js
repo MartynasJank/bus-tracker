@@ -92,23 +92,17 @@ export async function handlePlan(req, res, params) {
     LIMIT 300
   `).all(...destStops.map(stop => stop.stop_id), ...originStops.map(stop => stop.stop_id), ...serviceIds, lookbackTimeStr);
 
-  // Keep up to 3 departures per route
-  const routeDepartureCount = {};
-  const candidates = [];
+  // Build one candidate per trip_id, keeping the board stop closest to the user
+  const byTrip = new Map();
   for (const row of rows) {
-    const routeKey = row.route_short_name;
-    if ((routeDepartureCount[routeKey] || 0) >= 3) continue;
-    routeDepartureCount[routeKey] = (routeDepartureCount[routeKey] || 0) + 1;
-
     const travelMinutes  = Math.round((gtfsTimeToSeconds(row.alight_time) - gtfsTimeToSeconds(row.board_time)) / 60);
     const countdownSecs  = gtfsTimeToSeconds(row.board_time) + countdownOffset - nowSec;
     const tripKey = `${row.route_short_name}:${gtfsTimeToSeconds(row.trip_start_time)}`;
     const liveDelaySec = liveDelay[tripKey] ?? 0;
     const actualCountdown = countdownSecs + liveDelaySec;
-    if (countdownSecs < 0 && liveDelaySec <= 0) continue; // departed on schedule, not in GPS feed
-    if (actualCountdown < -60) continue; // departed more than 1 min ago in actual time
+    if (countdownSecs < 0 && liveDelaySec <= 0) continue;
+    if (actualCountdown < -60) continue;
 
-    // If past scheduled time, check GPS position — skip if bus has already passed the board stop
     if (countdownSecs < 0) {
       const pos = livePosition[tripKey];
       if (pos && pos.speed > 0) {
@@ -116,30 +110,45 @@ export async function handlePlan(req, res, params) {
         if (distToStop > 200) {
           const bearingToStop = bearing(pos.lat, pos.lon, row.board_lat, row.board_lon);
           const angleDiff = Math.abs(((bearingToStop - pos.azimuth + 540) % 360) - 180);
-          if (angleDiff > 90) continue; // board stop is behind the bus
+          if (angleDiff > 90) continue;
         }
       }
     }
 
-    candidates.push({
-      route_short_name: row.route_short_name,
-      route_color:      row.route_color,
-      route_text_color: row.route_text_color,
-      headsign:         row.trip_headsign,
-      trip_id:          row.trip_id,
-      board_stop:       { id: row.board_id, name: row.board_name, lat: row.board_lat, lon: row.board_lon },
-      alight_stop:      { id: row.alight_id, name: row.alight_name, lat: row.alight_lat, lon: row.alight_lon },
-      trip_start_time:  row.trip_start_time,
-      board_time:       row.board_time,
-      alight_time:      row.alight_time,
-      travel_min:       travelMinutes,
-      countdown_seconds: countdownSecs,
-      live_delay_sec:    liveDelaySec,
-      _boardKey:    `${row.board_lat},${row.board_lon}`,
-      _alightKey:   `${row.alight_lat},${row.alight_lon}`,
-      _boardCoords: [fromLat, fromLon, row.board_lat, row.board_lon],
-      _alightCoords: [toLat, toLon, row.alight_lat, row.alight_lon],
-    });
+    const boardDist = haversine(fromLat, fromLon, row.board_lat, row.board_lon);
+    const existing  = byTrip.get(row.trip_id);
+    if (!existing || boardDist < existing._boardDist) {
+      byTrip.set(row.trip_id, {
+        route_short_name: row.route_short_name,
+        route_color:      row.route_color,
+        route_text_color: row.route_text_color,
+        headsign:         row.trip_headsign,
+        trip_id:          row.trip_id,
+        board_stop:       { id: row.board_id, name: row.board_name, lat: row.board_lat, lon: row.board_lon },
+        alight_stop:      { id: row.alight_id, name: row.alight_name, lat: row.alight_lat, lon: row.alight_lon },
+        trip_start_time:  row.trip_start_time,
+        board_time:       row.board_time,
+        alight_time:      row.alight_time,
+        travel_min:       travelMinutes,
+        countdown_seconds: countdownSecs,
+        live_delay_sec:    liveDelaySec,
+        _boardDist:   boardDist,
+        _boardKey:    `${row.board_lat},${row.board_lon}`,
+        _alightKey:   `${row.alight_lat},${row.alight_lon}`,
+        _boardCoords: [fromLat, fromLon, row.board_lat, row.board_lon],
+        _alightCoords: [toLat, toLon, row.alight_lat, row.alight_lon],
+      });
+    }
+  }
+
+  // Keep up to 3 departures per route from the deduplicated trip list
+  const routeDepartureCount = {};
+  const candidates = [];
+  for (const candidate of byTrip.values()) {
+    const key = candidate.route_short_name;
+    if ((routeDepartureCount[key] || 0) >= 3) continue;
+    routeDepartureCount[key] = (routeDepartureCount[key] || 0) + 1;
+    candidates.push(candidate);
   }
 
   const upcoming = candidates.slice(0, 12);
@@ -161,16 +170,17 @@ export async function handlePlan(req, res, params) {
     candidate.board_walk_min  = boardWalkMin;
     candidate.alight_walk_min = alightWalkMin;
     candidate.total_min       = boardWalkMin + candidate.travel_min + alightWalkMin;
+    delete candidate._boardDist;
     delete candidate._boardCoords;
     delete candidate._alightCoords;
     delete candidate._boardKey;
     delete candidate._alightKey;
   }));
 
-  // Sort by total time to arrival at destination
+  // Sort by total time from now to arrival at destination (walk to stop + wait + ride + walk from stop)
   upcoming.sort((a, b) => {
-    const arrivalA = a.countdown_seconds + (a.travel_min + a.alight_walk_min) * 60;
-    const arrivalB = b.countdown_seconds + (b.travel_min + b.alight_walk_min) * 60;
+    const arrivalA = a.countdown_seconds + (a.board_walk_min + a.travel_min + a.alight_walk_min) * 60;
+    const arrivalB = b.countdown_seconds + (b.board_walk_min + b.travel_min + b.alight_walk_min) * 60;
     return arrivalA - arrivalB;
   });
 
