@@ -102,7 +102,8 @@ export async function handlePlan(req, res, params) {
     const tripKey = `${row.route_short_name}:${gtfsTimeToSeconds(row.trip_start_time)}`;
     const liveDelaySec = liveDelay[tripKey] ?? 0;
     const actualCountdown = countdownSecs + liveDelaySec;
-    if (actualCountdown < -300) continue; // departed more than 5 min ago in actual time
+    if (countdownSecs < 0 && liveDelaySec <= 0) continue; // departed on schedule, not in GPS feed
+    if (actualCountdown < -60) continue; // departed more than 1 min ago in actual time
 
     candidates.push({
       route_short_name: row.route_short_name,
