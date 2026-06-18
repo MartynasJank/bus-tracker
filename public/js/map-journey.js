@@ -225,6 +225,8 @@ export async function showJourneyMap(journey, allJourneys = []) {
     bus_trip_start: tripStartSec,
     trip_id:      journey.trip_id,
     destStopName: journey.alight_stop.name,
+    boardLat:     journey.board_stop.lat,
+    boardLon:     journey.board_stop.lon,
     alightLat:    journey.alight_stop.lat,
     alightLon:    journey.alight_stop.lon,
     alightTimeSec,
@@ -295,13 +297,21 @@ async function refreshBusPosition() {
     const { route, bus_trip_start } = state.mapTracking;
 
     // Pick the closest-matching bus on the tracked route
-    const matchedVehicle = vehicles
-      .filter(vehicle => vehicle.route === route)
-      .reduce((best, vehicle) => {
-        if (!best) return vehicle;
-        return Math.abs(vehicle.tripStartSec - bus_trip_start) < Math.abs(best.tripStartSec - bus_trip_start)
-          ? vehicle : best;
+    const routeVehicles = vehicles.filter(v => v.route === route);
+    let matchedVehicle = routeVehicles.reduce((best, v) => {
+      if (!best) return v;
+      return Math.abs(v.tripStartSec - bus_trip_start) < Math.abs(best.tripStartSec - bus_trip_start) ? v : best;
+    }, null);
+
+    // If the best time match is more than 5 min off, the GPS trip ID doesn't align with GTFS —
+    // fall back to whichever bus of this route is physically closest to the board stop
+    const { boardLat, boardLon } = state.mapTracking;
+    if (matchedVehicle && boardLat && Math.abs(matchedVehicle.tripStartSec - bus_trip_start) > 300) {
+      matchedVehicle = routeVehicles.reduce((best, v) => {
+        if (!best) return v;
+        return haversine(v.lat, v.lon, boardLat, boardLon) < haversine(best.lat, best.lon, boardLat, boardLon) ? v : best;
       }, null);
+    }
 
     if (matchedVehicle) {
       if (!busMarker) {
